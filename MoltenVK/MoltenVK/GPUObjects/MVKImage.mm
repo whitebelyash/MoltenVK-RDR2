@@ -1474,11 +1474,19 @@ uint32_t MVKImage::validateMipLevels(const VkImageCreateInfo* pCreateInfo, bool 
 bool MVKImage::validateLinear(const VkImageCreateInfo* pCreateInfo, bool isAttachment) {
 
 	if (pCreateInfo->tiling != VK_IMAGE_TILING_LINEAR ) { return false; }
+    
+    // HACK:
+    // RDR2/RAGE expects VK_SUCCESS as vkImageCreate() status and doesn't handle well texture imports fails.
+    // Skipping configuration result is enough to boot the game on at least AGX with some broken textures
+    // TODO: try lowering mipLevels/arrayLayers instead of making the image non-linear
 
 	bool isLin = true;
 
+    // WTF RDR2? 0xFFFF... after the R* logo
 	if (getImageType() != VK_IMAGE_TYPE_2D) {
-		setConfigurationResult(reportError(VK_ERROR_FEATURE_NOT_PRESENT, "vkCreateImage() : If tiling is VK_IMAGE_TILING_LINEAR, imageType must be VK_IMAGE_TYPE_2D."));
+		//setConfigurationResult(reportError(VK_ERROR_FEATURE_NOT_PRESENT, "vkCreateImage() : If tiling is VK_IMAGE_TILING_LINEAR, imageType must be VK_IMAGE_TYPE_2D."));
+        
+        reportError(VK_ERROR_FEATURE_NOT_PRESENT, "vkCreateImage() : If tiling is VK_IMAGE_TILING_LINEAR, imageType must be VK_IMAGE_TYPE_2D.");
 		isLin = false;
 	}
 
@@ -1494,14 +1502,18 @@ bool MVKImage::validateLinear(const VkImageCreateInfo* pCreateInfo, bool isAttac
 		setConfigurationResult(reportError(VK_ERROR_FEATURE_NOT_PRESENT, "vkCreateImage() : If tiling is VK_IMAGE_TILING_LINEAR, format must not be a single-plane chroma subsampled format."));
 		isLin = false;
 	}
-
+    
+    // Causes RAGE hardcrash
 	if (pCreateInfo->mipLevels > 1) {
-		setConfigurationResult(reportError(VK_ERROR_FEATURE_NOT_PRESENT, "vkCreateImage() : If tiling is VK_IMAGE_TILING_LINEAR, mipLevels must be 1."));
+		//setConfigurationResult(reportError(VK_ERROR_FEATURE_NOT_PRESENT, "vkCreateImage() : If tiling is VK_IMAGE_TILING_LINEAR, mipLevels must be 1."));
+        
+        reportError(VK_ERROR_FEATURE_NOT_PRESENT, "vkCreateImage() : If tiling is VK_IMAGE_TILING_LINEAR, mipLevels must be 1.");
 		isLin = false;
 	}
-
+    // Causes RDR2 to stuck on the world enter screen in the image creation loop
 	if (pCreateInfo->arrayLayers > 1) {
-		setConfigurationResult(reportError(VK_ERROR_FEATURE_NOT_PRESENT, "vkCreateImage() : If tiling is VK_IMAGE_TILING_LINEAR, arrayLayers must be 1."));
+		//setConfigurationResult(reportError(VK_ERROR_FEATURE_NOT_PRESENT, "vkCreateImage() : If tiling is VK_IMAGE_TILING_LINEAR, arrayLayers must be 1."));
+        reportError(VK_ERROR_FEATURE_NOT_PRESENT, "vkCreateImage() : If tiling is VK_IMAGE_TILING_LINEAR, arrayLayers must be 1.");
 		isLin = false;
 	}
 
@@ -1510,9 +1522,11 @@ bool MVKImage::validateLinear(const VkImageCreateInfo* pCreateInfo, bool isAttac
 		isLin = false;
 	}
 
+// This one triggers too for some reason (shouldn't be? We're on Apple Silicon anyway)
 #if !MVK_APPLE_SILICON
 	if (isAttachment) {
-		setConfigurationResult(reportError(VK_ERROR_FEATURE_NOT_PRESENT, "vkCreateImage() : This device does not support rendering to linear (VK_IMAGE_TILING_LINEAR) images."));
+		//setConfigurationResult(reportError(VK_ERROR_FEATURE_NOT_PRESENT, "vkCreateImage() : This device does not support rendering to linear (VK_IMAGE_TILING_LINEAR) images."));
+        reportError(VK_ERROR_FEATURE_NOT_PRESENT, "vkCreateImage() : This device does not support rendering to linear (VK_IMAGE_TILING_LINEAR) images.");
 		isLin = false;
 	}
 #endif
