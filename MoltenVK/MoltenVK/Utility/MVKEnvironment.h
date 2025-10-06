@@ -336,7 +336,7 @@ void mvkSetConfig(MVKConfiguration& dstMVKConfig, const MVKConfiguration& srcMVK
 
 /** Support Metal argument buffers. Enabled by default. */
 #ifndef MVK_CONFIG_USE_METAL_ARGUMENT_BUFFERS
-#   define MVK_CONFIG_USE_METAL_ARGUMENT_BUFFERS    1
+#   define MVK_CONFIG_USE_METAL_ARGUMENT_BUFFERS    0
 #endif
 
 /** Compress MSL shader source code in a pipeline cache. Defaults to no compression. */
