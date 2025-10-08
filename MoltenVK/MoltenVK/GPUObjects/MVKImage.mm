@@ -1274,8 +1274,16 @@ MVKImage::MVKImage(MVKDevice* device, const VkImageCreateInfo* pCreateInfo) : MV
 	_mtlTextureType = mvkMTLTextureTypeFromVkImageType(pCreateInfo->imageType, _arrayLayers, _samples > VK_SAMPLE_COUNT_1_BIT);
 
 	validateConfig(pCreateInfo, isAttachment);
+    
 	_mipLevels = validateMipLevels(pCreateInfo, isAttachment);
 	_isLinear = validateLinear(pCreateInfo, isAttachment);
+    
+    // HACK:
+    // RDR2/RAGE expects VK_SUCCESS as vkCreateImage() status and doesn't handle well texture imports fails.
+    // Previous miplevel/linear validation methods have set it to VK_ERROR_FEATURE_NOT_PRESENT
+    // Skipping configuration result is enough to boot the game on at least AGX with some broken textures (probably caused by missing gl_CullDistance support)
+    // try lowering mipLevels/arrayLayers instead of making the image non-linear - this breaks the game or results in a Metal assertion
+    clearConfigurationResult();
 
 	auto& mtlFeats = getMetalFeatures();
 	MVKPixelFormats* pixFmts = getPixelFormats();
@@ -1475,18 +1483,12 @@ bool MVKImage::validateLinear(const VkImageCreateInfo* pCreateInfo, bool isAttac
 
 	if (pCreateInfo->tiling != VK_IMAGE_TILING_LINEAR ) { return false; }
     
-    // HACK:
-    // RDR2/RAGE expects VK_SUCCESS as vkImageCreate() status and doesn't handle well texture imports fails.
-    // Skipping configuration result is enough to boot the game on at least AGX with some broken textures
-    // TODO: try lowering mipLevels/arrayLayers instead of making the image non-linear
+   
 
 	bool isLin = true;
 
-    // WTF RDR2? 0xFFFF... after the R* logo
 	if (getImageType() != VK_IMAGE_TYPE_2D) {
-		//setConfigurationResult(reportError(VK_ERROR_FEATURE_NOT_PRESENT, "vkCreateImage() : If tiling is VK_IMAGE_TILING_LINEAR, imageType must be VK_IMAGE_TYPE_2D."));
-        
-        reportError(VK_ERROR_FEATURE_NOT_PRESENT, "vkCreateImage() : If tiling is VK_IMAGE_TILING_LINEAR, imageType must be VK_IMAGE_TYPE_2D.");
+		setConfigurationResult(reportError(VK_ERROR_FEATURE_NOT_PRESENT, "vkCreateImage() : If tiling is VK_IMAGE_TILING_LINEAR, imageType must be VK_IMAGE_TYPE_2D."));
 		isLin = false;
 	}
 
@@ -1503,17 +1505,12 @@ bool MVKImage::validateLinear(const VkImageCreateInfo* pCreateInfo, bool isAttac
 		isLin = false;
 	}
     
-    // Causes RAGE hardcrash
 	if (pCreateInfo->mipLevels > 1) {
-		//setConfigurationResult(reportError(VK_ERROR_FEATURE_NOT_PRESENT, "vkCreateImage() : If tiling is VK_IMAGE_TILING_LINEAR, mipLevels must be 1."));
-        
-        reportError(VK_ERROR_FEATURE_NOT_PRESENT, "vkCreateImage() : If tiling is VK_IMAGE_TILING_LINEAR, mipLevels must be 1.");
+		setConfigurationResult(reportError(VK_ERROR_FEATURE_NOT_PRESENT, "vkCreateImage() : If tiling is VK_IMAGE_TILING_LINEAR, mipLevels must be 1."));
 		isLin = false;
 	}
-    // Causes RDR2 to stuck on the world enter screen in the image creation loop
 	if (pCreateInfo->arrayLayers > 1) {
-		//setConfigurationResult(reportError(VK_ERROR_FEATURE_NOT_PRESENT, "vkCreateImage() : If tiling is VK_IMAGE_TILING_LINEAR, arrayLayers must be 1."));
-        reportError(VK_ERROR_FEATURE_NOT_PRESENT, "vkCreateImage() : If tiling is VK_IMAGE_TILING_LINEAR, arrayLayers must be 1.");
+		setConfigurationResult(reportError(VK_ERROR_FEATURE_NOT_PRESENT, "vkCreateImage() : If tiling is VK_IMAGE_TILING_LINEAR, arrayLayers must be 1."));
 		isLin = false;
 	}
 
@@ -1522,12 +1519,16 @@ bool MVKImage::validateLinear(const VkImageCreateInfo* pCreateInfo, bool isAttac
 		isLin = false;
 	}
 
-// This one triggers too for some reason (shouldn't be? We're on Apple Silicon anyway)
+// This one currently triggers even on Apple Silicon if the app is running under Rosetta.
+// Skipping for now
+// TODO: revert when refined platform detection merges in the upstream
 #if !MVK_APPLE_SILICON
 	if (isAttachment) {
-		//setConfigurationResult(reportError(VK_ERROR_FEATURE_NOT_PRESENT, "vkCreateImage() : This device does not support rendering to linear (VK_IMAGE_TILING_LINEAR) images."));
-        reportError(VK_ERROR_FEATURE_NOT_PRESENT, "vkCreateImage() : This device does not support rendering to linear (VK_IMAGE_TILING_LINEAR) images.");
+        /*
+		setConfigurationResult(reportError(VK_ERROR_FEATURE_NOT_PRESENT, "vkCreateImage() : This device does not support rendering to linear (VK_IMAGE_TILING_LINEAR) images."));
 		isLin = false;
+         */
+        isLin = true;
 	}
 #endif
 
