@@ -404,7 +404,7 @@ MVKDeviceMemory::MVKDeviceMemory(MVKDevice* device,
 	if (dedicatedImage) {
 #if MVK_MACOS
 		if (isMemoryHostCoherent() ) {
-			if (!dedicatedImage->_isLinear) {
+			if (!isAppleGPU() && !dedicatedImage->_isLinear) {
 				setConfigurationResult(reportError(VK_ERROR_OUT_OF_DEVICE_MEMORY, "vkAllocateMemory(): Host-coherent VkDeviceMemory objects cannot be associated with optimal-tiling images."));
 			} else if (!ensureMTLBuffer()) {
 				// Nonetheless, we need a buffer to be able to map the memory at will.
