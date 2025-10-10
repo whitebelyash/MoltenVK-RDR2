@@ -1518,17 +1518,11 @@ bool MVKImage::validateLinear(const VkImageCreateInfo* pCreateInfo, bool isAttac
 		setConfigurationResult(reportError(VK_ERROR_FEATURE_NOT_PRESENT, "vkCreateImage() : If tiling is VK_IMAGE_TILING_LINEAR, samples must be VK_SAMPLE_COUNT_1_BIT."));
 		isLin = false;
 	}
-
-// This one currently triggers even on Apple Silicon if the app is running under Rosetta.
-// Skipping for now
-// TODO: revert when refined platform detection merges in the upstream
+    
 #if !MVK_APPLE_SILICON
 	if (isAttachment) {
-        /*
 		setConfigurationResult(reportError(VK_ERROR_FEATURE_NOT_PRESENT, "vkCreateImage() : This device does not support rendering to linear (VK_IMAGE_TILING_LINEAR) images."));
 		isLin = false;
-         */
-        isLin = true;
 	}
 #endif
 
