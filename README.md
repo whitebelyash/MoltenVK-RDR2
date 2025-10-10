@@ -3,13 +3,13 @@
 
 This is a MoltenVK fork containing an extremely small hack to boot RDR2 Vulkan on Apple GPUs. AMD/Intel are still broken (MTLCommandBuffer execution timeout)  
 DX12 backend requires VKD3D and this setup is known to work only under CrossOver.  
-(at this moment it also ships an unmerged PR from the main MVK repo - I haven't noticed any changes of implemented primitive restart control, but still nice to have less spam in logs)
+~~(at this moment it also ships an unmerged PR from the main MVK repo - I haven't noticed any changes of implemented primitive restart control, but still nice to have less spam in logs)~~
 
 Tested on Apple M1.
 
-What's borked:
-* Missing water reflections/waves - probably caused by incorrect image layouts(?) - needs checking on Honeykrisp.
-* Flickering trees/objects - missing gl_CullDistance might be the reason, however, some of this is also present on Honeykrisp.
+What's borked:  
+* [ ] Missing water reflections/waves - probably caused by incorrect image layouts(?) - needs checking on Honeykrisp. Isn't broken on D3DMetal.  
+* [x] Flickering trees/objects - missing gl_CullDistance might be the reason, however, some of this is also present on Honeykrisp - Fixed by disabling MTLHeaps (gl_CullDistance is not a culprit)
 
 Compile with Metal Private API enabled and use the `wine@devel` package from homebrew - don't forget to replace the MoltenVK dylib.
 
