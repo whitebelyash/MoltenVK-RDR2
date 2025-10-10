@@ -856,20 +856,26 @@ MVKGraphicsPipeline::MVKGraphicsPipeline(MVKDevice* device,
 	_staticStateData.primitiveType = mvkMTLPrimitiveTypeFromVkPrimitiveTopology(_vkPrimitiveTopology);
 	_staticStateData.enable.set(MVKRenderStateEnableFlag::PrimitiveRestart, primitiveRestart);
 
-	// In Metal, primitive restart cannot be disabled, so issue a warning if the app
-	// has disabled it statically, or indicates that it might do so dynamically.
-	// Just issue a warning here, as it is very likely the app is not actually
-	// expecting to use primitive restart at all, and is disabling it "just-in-case".
-	// As such, forcing an error here would be unexpected to the app (including CTS).
-	// BTW, although Metal docs avoid mentioning it, testing shows that Metal does not support primitive
-	// restart for list topologies, meaning VK_EXT_primitive_topology_list_restart cannot be supported.
-	if (( !primitiveRestart || _dynamicStateFlags.has(MVKRenderStateFlag::PrimitiveRestartEnable)) &&
-		 (_vkPrimitiveTopology == VK_PRIMITIVE_TOPOLOGY_LINE_STRIP ||
-		  _vkPrimitiveTopology == VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP ||
-		  _vkPrimitiveTopology == VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN ||
-		  _dynamicStateFlags.has(MVKRenderStateFlag::PrimitiveTopology))) {
-		reportWarning(VK_ERROR_FEATURE_NOT_PRESENT, "Metal does not support disabling primitive restart.");
+#if MVK_USE_METAL_PRIVATE_API
+	if (!getMVKConfig().useMetalPrivateAPI) {
+#endif
+		// In Metal, primitive restart cannot be disabled, so issue a warning if the app
+		// has disabled it statically, or indicates that it might do so dynamically.
+		// Just issue a warning here, as it is very likely the app is not actually
+		// expecting to use primitive restart at all, and is disabling it "just-in-case".
+		// As such, forcing an error here would be unexpected to the app (including CTS).
+		// BTW, although Metal docs avoid mentioning it, testing shows that Metal does not support primitive
+		// restart for list topologies, meaning VK_EXT_primitive_topology_list_restart cannot be supported.
+		if ((!primitiveRestart || _dynamicStateFlags.has(MVKRenderStateFlag::PrimitiveRestartEnable)) &&
+			 (_vkPrimitiveTopology == VK_PRIMITIVE_TOPOLOGY_LINE_STRIP ||
+			  _vkPrimitiveTopology == VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP ||
+			  _vkPrimitiveTopology == VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN ||
+			  _dynamicStateFlags.has(MVKRenderStateFlag::PrimitiveTopology))) {
+			reportWarning(VK_ERROR_FEATURE_NOT_PRESENT, "Metal does not support disabling primitive restart.");
+		}
+#if MVK_USE_METAL_PRIVATE_API
 	}
+#endif
 
 	// Must run after _isRasterizing and _dynamicState are populated
 	initSampleLocations(pCreateInfo);
@@ -1901,7 +1907,7 @@ void MVKGraphicsPipeline::addFragmentOutputToPipeline(MTLRenderPipelineDescripto
 													  const VkGraphicsPipelineCreateInfo* pCreateInfo) {
 	// Topology
 	if (pCreateInfo->pInputAssemblyState)
-		plDesc.inputPrimitiveTopologyMVK = getPrimitiveTopologyClass();
+		plDesc.inputPrimitiveTopology = getPrimitiveTopologyClass();
 
 	const VkPipelineRenderingCreateInfo* pRendInfo = getRenderingCreateInfo(pCreateInfo);
 
@@ -2018,7 +2024,7 @@ void MVKGraphicsPipeline::initShaderConversionConfig(SPIRVToMSLConversionConfigu
     shaderConfig.options.mslOptions.msl_version = mtlFeats.mslVersion;
     shaderConfig.options.mslOptions.texel_buffer_texture_width = mtlFeats.maxTextureDimension;
     shaderConfig.options.mslOptions.r32ui_linear_texture_alignment = (uint32_t)_device->getVkFormatTexelBufferAlignment(VK_FORMAT_R32_UINT, this);
-	shaderConfig.options.mslOptions.texture_buffer_native = mtlFeats.textureBuffers;
+	shaderConfig.options.mslOptions.texture_buffer_native = true;
 
 	bool useMetalArgBuff = isUsingMetalArgumentBuffers();
 	shaderConfig.options.mslOptions.argument_buffers = useMetalArgBuff;
@@ -2417,10 +2423,7 @@ MVKComputePipeline::MVKComputePipeline(MVKDevice* device,
 	if (mtlFunc) {
 		MTLComputePipelineDescriptor* plDesc = [MTLComputePipelineDescriptor new];	// temp retain
 		plDesc.computeFunction = mtlFunc;
-		// Only available macOS 10.14+
-		if ([plDesc respondsToSelector:@selector(setMaxTotalThreadsPerThreadgroup:)]) {
-			plDesc.maxTotalThreadsPerThreadgroup = _mtlThreadgroupSize.width * _mtlThreadgroupSize.height * _mtlThreadgroupSize.depth;
-		}
+		plDesc.maxTotalThreadsPerThreadgroup = _mtlThreadgroupSize.width * _mtlThreadgroupSize.height * _mtlThreadgroupSize.depth;
 		plDesc.threadGroupSizeIsMultipleOfThreadExecutionWidth = mvkIsAnyFlagEnabled(pCreateInfo->stage.flags, VK_PIPELINE_SHADER_STAGE_CREATE_REQUIRE_FULL_SUBGROUPS_BIT);
 
 		// Metal does not allow the name of the pipeline to be changed after it has been created,
@@ -2466,7 +2469,7 @@ MVKMTLFunction MVKComputePipeline::getMTLFunction(const VkComputePipelineCreateI
     shaderConfig.options.mslOptions.texel_buffer_texture_width = mtlFeats.maxTextureDimension;
     shaderConfig.options.mslOptions.r32ui_linear_texture_alignment = (uint32_t)_device->getVkFormatTexelBufferAlignment(VK_FORMAT_R32_UINT, this);
 	shaderConfig.options.mslOptions.swizzle_texture_samples = _fullImageViewSwizzle && !mtlFeats.nativeTextureSwizzle;
-	shaderConfig.options.mslOptions.texture_buffer_native = mtlFeats.textureBuffers;
+	shaderConfig.options.mslOptions.texture_buffer_native = true;
 	shaderConfig.options.mslOptions.dispatch_base = _allowsDispatchBase;
 	shaderConfig.options.mslOptions.texture_1D_as_2D = mvkCfg.texture1DAs2D;
     shaderConfig.options.mslOptions.fixed_subgroup_size = mvkIsAnyFlagEnabled(pSS->flags, VK_PIPELINE_SHADER_STAGE_CREATE_ALLOW_VARYING_SUBGROUP_SIZE_BIT) ? 0 : mtlFeats.maxSubgroupSize;

@@ -21,48 +21,30 @@
 #include "MVKCommonEnvironment.h"
 
 
-#if MVK_USE_METAL_PRIVATE_API && !MVK_XCODE_26
-/** Additional methods not necessarily declared in <Metal/MTLSampler.h>. */
-@interface MTLSamplerDescriptor ()
-
-@property(nonatomic, readwrite) float lodBias;
-
-@end
-#endif
-
 @implementation MTLSamplerDescriptor (MoltenVK)
 
--(MTLCompareFunction) compareFunctionMVK {
-	if ( [self respondsToSelector: @selector(compareFunction)] ) { return self.compareFunction; }
-	return MTLCompareFunctionNever;
-}
-
--(void) setCompareFunctionMVK: (MTLCompareFunction) cmpFunc {
-	if ( [self respondsToSelector: @selector(setCompareFunction:)] ) { self.compareFunction = cmpFunc; }
-}
-
 -(NSUInteger) borderColorMVK {
-#if MVK_MACOS_OR_IOS
+#if MVK_MACOS_OR_IOS || MVK_XCODE_14
 	if ( [self respondsToSelector: @selector(borderColor)] ) { return self.borderColor; }
 #endif
 	return /*MTLSamplerBorderColorTransparentBlack*/ 0;
 }
 
 -(void) setBorderColorMVK: (NSUInteger) color {
-#if MVK_MACOS_OR_IOS
+#if MVK_MACOS_OR_IOS || MVK_XCODE_14
 	if ( [self respondsToSelector: @selector(setBorderColor:)] ) { self.borderColor = (MTLSamplerBorderColor) color; }
 #endif
 }
 
 -(float) lodBiasMVK {
-#if MVK_USE_METAL_PRIVATE_API || MVK_XCODE_26
+#if MVK_XCODE_26
 	if ( [self respondsToSelector: @selector(lodBias)] ) { return self.lodBias; }
 #endif
 	return 0.0f;
 }
 
 -(void) setLodBiasMVK: (float) bias {
-#if MVK_USE_METAL_PRIVATE_API || MVK_XCODE_26
+#if MVK_XCODE_26
 	if ( [self respondsToSelector: @selector(setLodBias:)] ) { self.lodBias = bias; }
 #endif
 }

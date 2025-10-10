@@ -43,7 +43,7 @@ id<MTLRenderPipelineState> MVKCommandResourceFactory::newCmdBlitImageMTLRenderPi
 	plDesc.fragmentFunction = fragFunc;
 	plDesc.sampleCount = blitKey.dstSampleCount;
 	if (isLayeredBlit) {
-		plDesc.inputPrimitiveTopologyMVK = MTLPrimitiveTopologyClassTriangle;
+		plDesc.inputPrimitiveTopology = MTLPrimitiveTopologyClassTriangle;
 	}
 
 	if (mvkIsAnyFlagEnabled(blitKey.srcAspect, (VK_IMAGE_ASPECT_DEPTH_BIT))) {
@@ -123,7 +123,7 @@ id<MTLRenderPipelineState> MVKCommandResourceFactory::newCmdClearMTLRenderPipeli
 	plDesc.vertexFunction = vtxFunc;
     plDesc.fragmentFunction = fragFunc;
 	plDesc.sampleCount = attKey.mtlSampleCount;
-	plDesc.inputPrimitiveTopologyMVK = MTLPrimitiveTopologyClassTriangle;
+	plDesc.inputPrimitiveTopology = MTLPrimitiveTopologyClassTriangle;
 
     for (uint32_t caIdx = 0; caIdx < kMVKClearColorAttachmentCount; caIdx++) {
         MTLRenderPipelineColorAttachmentDescriptor* colorDesc = plDesc.colorAttachments[caIdx];
@@ -616,6 +616,12 @@ id<MTLComputePipelineState> MVKCommandResourceFactory::newAccumulateOcclusionQue
 }
 
 id<MTLComputePipelineState> MVKCommandResourceFactory::newConvertUint8IndicesMTLComputePipelineState(MVKVulkanAPIDeviceObject* owner) {
+#if MVK_USE_METAL_PRIVATE_API
+	if (getMVKConfig().useMetalPrivateAPI) {
+		// Private API allows us to control restart index and enable. Do not convert restart sentinels.
+		return newMTLComputePipelineState("convertUint8IndicesRaw", owner);
+	}
+#endif
 	return newMTLComputePipelineState("convertUint8Indices", owner);
 }
 
