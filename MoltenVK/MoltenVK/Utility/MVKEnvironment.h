@@ -276,7 +276,7 @@ void mvkSetConfig(MVKConfiguration& dstMVKConfig, const MVKConfiguration& srcMVK
  * Enabled by default where safe to use MTLHeap on the platform.
  */
 #ifndef MVK_CONFIG_USE_MTLHEAP
-#  	define MVK_CONFIG_USE_MTLHEAP    MVK_CONFIG_USE_MTLHEAP_WHERE_SAFE
+#  	define MVK_CONFIG_USE_MTLHEAP    0 // XXX Fixes RDR2 flickering objects
 #endif
 
 /** The Vulkan API version to advertise. Defaults to MVK_VULKAN_API_VERSION. */
