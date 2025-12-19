@@ -2462,9 +2462,11 @@ void MVKPhysicalDevice::initMetalFeatures() {
 	                                 : cfgUseMTLHeap != MVK_CONFIG_USE_MTLHEAP_NEVER);
 	_metalFeatures.multisampleArrayTextures = !MVK_TVOS || mvkOSVersionIsAtLeast(16.0);
 
+#if !MVK_USE_MSL_2_4
 	// Dynamic vertex stride needs to have everything aligned - compiled with support for vertex stride calls, and supported by both runtime OS and GPU.
 	_metalFeatures.dynamicVertexStride = mvkOSVersionIsAtLeast(14.0, 17.0, 1.0) && (supportsMTLGPUFamily(Apple4) || supportsMTLGPUFamily(Mac2));
 	_metalFeatures.nativeTextureAtomics = mvkOSVersionIsAtLeast(14.0, 17.0, 1.0) && (supportsMTLGPUFamily(Metal3) || supportsMTLGPUFamily(Apple6) || supportsMTLGPUFamily(Mac2));
+#endif
 
 	if (supportsMTLGPUFamily(Mac2)) {
 		_metalFeatures.mtlBufferAlignment = 256;
@@ -2608,6 +2610,13 @@ void MVKPhysicalDevice::initMetalFeatures() {
 		_metalFeatures.mslVersionEnum = MTLLanguageVersion2_3;
 		setMSLVersion(2, 3);
 	}
+
+#if MVK_USE_MSL_2_4
+	if ( mvkOSVersionIsAtLeast(12.0) ) {
+		_metalFeatures.mslVersionEnum = MTLLanguageVersion2_4;
+		setMSLVersion(2, 4);
+	}
+#endif
 
 	_metalFeatures.programmableSamplePositions = _mtlDevice.areProgrammableSamplePositionsSupported;
 	_metalFeatures.rasterOrderGroups = _mtlDevice.areRasterOrderGroupsSupported;
