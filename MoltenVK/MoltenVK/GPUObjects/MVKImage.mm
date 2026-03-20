@@ -1205,6 +1205,13 @@ MVKImage::MVKImage(MVKDevice* device, const VkImageCreateInfo* pCreateInfo) : MV
 	_mipLevels = validateMipLevels(pCreateInfo, isAttachment);
 	_isLinear = validateLinear(pCreateInfo, isAttachment);
 
+	// HACK:
+    	// RDR2/RAGE expects VK_SUCCESS as vkCreateImage() status and doesn't handle well texture imports fails.
+    	// Previous miplevel/linear validation methods have set it to VK_ERROR_FEATURE_NOT_PRESENT
+   	// Skipping configuration result is enough to boot the game on at least AGX with some broken textures (probably caused by missing gl_CullDistance support)
+    	// try lowering mipLevels/arrayLayers instead of making the image non-linear - this breaks the game or results in a Metal assertion
+    	clearConfigurationResult();
+
 	auto& mtlFeats = getMetalFeatures();
 	MVKPixelFormats* pixFmts = getPixelFormats();
     _vkFormat = pCreateInfo->format;
