@@ -54,7 +54,6 @@ template<typename T, size_t N = 0>
 #include <initializer_list>
 #include <utility>
 
-using MVKSmallVector = std::vector<T>;
 template<typename Type, typename Allocator = mvk_smallvector_allocator<Type, 0>>
 class MVKSmallVectorImpl
 {
