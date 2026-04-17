@@ -14,7 +14,7 @@ What's borked:
 Compile with Metal Private API enabled and use the `wine@devel` package from homebrew - don't forget to replace the MoltenVK dylib.
 
 why? for fun  
-upstream? no, R* engineers should fix spec violations instead - they're not present on DX12 backend ~~(or being hidden by vkd3d)~~ does D3D12 even have a `TILING_LINEAR` equivalent?7
+upstream? no, R* engineers should fix spec violations instead.
 
 Performance is similar or same as with official GPTK tool.
 
